@@ -1,0 +1,42 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green: #1B5E20;
+  --green-mid: #2E7D32;
+  --green-light: #C8E6C9;
+  --green-pale: #F1F8E9;
+  --accent: #1565C0;
+  --accent-light: #E3F2FD;
+  --surface: #ffffff;
+  --surface-1: #F8F9FA;
+  --surface-2: #F1F3F4;
+  --border: #E0E0E0;
+  --border-strong: #BDBDBD;
+  --text: #212121;
+  --text-2: #555555;
+  --text-3: #888888;
+  --radius: 8px;
+  --shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--surface-1);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+select, input[type=text], input[type=number], input[type=date], textarea {
+  width: 100%;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 11px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
