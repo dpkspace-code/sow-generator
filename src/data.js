@@ -58,12 +58,23 @@ export async function toBase64(file) {
   })
 }
 
+// Always routes through our backend — no CORS issues, no API key needed client-side
 export async function callGenerate(system, messages) {
+  // Strip any document attachments to stay within Vercel's 4.5MB limit
+  // File uploads are a future enhancement — text generation works perfectly
+  const safeMessages = messages.map(m => ({
+    ...m,
+    content: Array.isArray(m.content)
+      ? m.content.filter(c => c.type === 'text')
+      : m.content
+  }))
+
   const res = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ system, messages }),
+    body: JSON.stringify({ system, messages: safeMessages }),
   })
+
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Generation failed')
   return data.content.filter(b => b.type === 'text').map(b => b.text).join('')
@@ -74,7 +85,7 @@ export function parseWeeksJSON(raw) {
   try { return JSON.parse(clean) } catch {
     const m = clean.match(/\[[\s\S]*\]/)
     if (m) return JSON.parse(m[0])
-    throw new Error('AI returned invalid JSON — please try again')
+    throw new Error('AI returned invalid format — please try again')
   }
 }
 
