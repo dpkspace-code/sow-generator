@@ -1,7 +1,7 @@
 // src/pages/GeneratePage.jsx
 import { useState, useEffect } from 'react'
 import { SUBJECTS, GRADE_LABELS, getGroup, toBase64, callGenerate, parseWeeksJSON } from '../data.js'
-import { buildExcel, buildWord, buildPrint } from '../builders.js'
+import { renderSOW, downloadBlob } from '../data.js'
 import FileUpload from '../components/FileUpload.jsx'
 import FormatPicker from '../components/FormatPicker.jsx'
 import Card from '../components/Card.jsx'
@@ -103,9 +103,11 @@ Return ONLY the JSON array.`
 
     const meta = { subject, grade, term, year, numWeeks: weeksInt }
     try {
-      if (format === 'excel') buildExcel(weeks, meta)
-      else if (format === 'word') buildWord(weeks, meta)
-      else buildPrint(weeks, meta)
+      const blob = await renderSOW(weeks, meta, format)
+      const ext = format === 'excel' ? 'xlsx' : format === 'word' ? 'doc' : 'html'
+      downloadBlob(blob, `SOW_${meta.subject.replace(/\s+/g,'_')}_${meta.term.replace(/\s+/g,'_')}_${meta.year}.${ext}`)
+
+
       setProgress(100)
       setMsg({ text: `✓ Downloaded — ${weeks.length}-week SOW for ${subject} (Grade ${grade}), ${term} ${year}`, type: 'done' })
     } catch (e) {

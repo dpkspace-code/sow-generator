@@ -1,4 +1,4 @@
-// src/data.js — Mauritius secondary school curriculum
+// src/data.js — Mauritius secondary curriculum + API helpers
 
 export const SUBJECTS = {
   lower: [
@@ -58,10 +58,8 @@ export async function toBase64(file) {
   })
 }
 
-// Always routes through our backend — no CORS issues, no API key needed client-side
+// Call Render backend via Vercel proxy — no timeout, no CORS
 export async function callGenerate(system, messages) {
-  // Strip any document attachments to stay within Vercel's 4.5MB limit
-  // File uploads are a future enhancement — text generation works perfectly
   const safeMessages = messages.map(m => ({
     ...m,
     content: Array.isArray(m.content)
@@ -78,6 +76,27 @@ export async function callGenerate(system, messages) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Generation failed')
   return data.content.filter(b => b.type === 'text').map(b => b.text).join('')
+}
+
+// Render SOW via Render backend — returns a blob for download
+export async function renderSOW(weeks, meta, format) {
+  const res = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      _endpoint: 'render',
+      weeks,
+      format,
+      ...meta,
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Render failed' }))
+    throw new Error(err.error || 'Render failed')
+  }
+
+  return res.blob()
 }
 
 export function parseWeeksJSON(raw) {
