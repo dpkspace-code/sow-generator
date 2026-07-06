@@ -58,42 +58,49 @@ export async function toBase64(file) {
   })
 }
 
-// Call Render backend via Vercel proxy — no timeout, no CORS
+const RENDER_BASE = 'https://caie-api.onrender.com/api/v1/sow'
+
+// Call Render backend directly for AI generation
 export async function callGenerate(system, messages) {
   const safeMessages = messages.map(m => ({
     ...m,
     content: Array.isArray(m.content)
       ? m.content.filter(c => c.type === 'text')
-      : m.content
+      : m.content,
   }))
 
-  const res = await fetch('/api/generate', {
+  const res = await fetch(`${RENDER_BASE}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ system, messages: safeMessages }),
   })
 
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Generation failed')
+  // Safe parse — backend may return plain text on error
+  const text = await res.text()
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error('Server error: ' + text.slice(0, 120))
+  }
+
+  if (!res.ok) throw new Error(data.detail || data.error || 'Generation failed')
   return data.content.filter(b => b.type === 'text').map(b => b.text).join('')
 }
 
 // Render SOW via Render backend — returns a blob for download
 export async function renderSOW(weeks, meta, format) {
-  const res = await fetch('/api/generate', {
+  const res = await fetch(`${RENDER_BASE}/render`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      _endpoint: 'render',
-      weeks,
-      format,
-      ...meta,
-    }),
+    body: JSON.stringify({ weeks, format, ...meta }),
   })
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Render failed' }))
-    throw new Error(err.error || 'Render failed')
+    const text = await res.text()
+    let msg = 'Render failed'
+    try { msg = JSON.parse(text).detail || msg } catch { msg = text.slice(0, 120) }
+    throw new Error(msg)
   }
 
   return res.blob()
