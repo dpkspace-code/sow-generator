@@ -4,8 +4,7 @@
   "framework": "vite",
   "functions": {
     "api/generate.js": {
-      "maxDuration": 120,
-      "memory": 1024
+      "maxDuration": 60
     }
   },
   "rewrites": [
