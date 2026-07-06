@@ -1,4 +1,3 @@
-// Proxy to PaperVault backend on Render (no timeout issues)
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -16,28 +15,32 @@ export default async function handler(req, res) {
       body: JSON.stringify(body),
     })
 
-    const raw = await r.text()
+    const ct = r.headers.get('content-type') || ''
+
     if (!r.ok) {
+      const errText = await r.text()
       try {
-        const err = JSON.parse(raw)
-        return res.status(r.status).json({ error: err.detail || err.error || raw.slice(0, 200) })
+        const errJson = JSON.parse(errText)
+        return res.status(r.status).json({ error: errJson.detail || errJson.error || errText.slice(0, 200) })
       } catch {
-        return res.status(r.status).json({ error: raw.slice(0, 200) })
+        return res.status(r.status).json({ error: errText.slice(0, 200) })
       }
     }
 
-    // Forward response with original content type
-    const ct = r.headers.get('content-type') || 'application/json'
-    res.setHeader('Content-Type', ct)
+    // JSON response (generation result)
     if (ct.includes('application/json')) {
-      return res.status(200).json(JSON.parse(raw))
-    } else {
-      // Binary file (Excel etc) — forward as buffer
-      const buf = Buffer.from(raw, 'binary')
-      const cd = r.headers.get('content-disposition') || ''
-      if (cd) res.setHeader('Content-Disposition', cd)
-      return res.status(200).send(buf)
+      const data = await r.json()
+      return res.status(200).json(data)
     }
+
+    // Binary file response (Excel, Word etc)
+    const arrayBuffer = await r.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    const cd = r.headers.get('content-disposition') || ''
+    res.setHeader('Content-Type', ct)
+    if (cd) res.setHeader('Content-Disposition', cd)
+    return res.status(200).send(buffer)
+
   } catch (err) {
     return res.status(500).json({ error: err.message })
   }
